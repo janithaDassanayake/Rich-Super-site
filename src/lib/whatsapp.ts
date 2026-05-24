@@ -1,5 +1,6 @@
-import type { CartItem, CustomerDetails } from "@/types";
+import type { CartItem, CustomerDetails, OrderDetails } from "@/types";
 import { formatRs } from "./format";
+import { formatDateLong } from "./scheduling";
 
 const SHOP = process.env.NEXT_PUBLIC_SHOP_NAME ?? "Rich Super";
 
@@ -9,6 +10,7 @@ const orderNumber = (): string =>
 interface BuildArgs {
   items: CartItem[];
   customer: CustomerDetails;
+  order: OrderDetails;
   total: number;
   ref: string;
   otp: string;
@@ -17,6 +19,7 @@ interface BuildArgs {
 export const buildOrderMessage = ({
   items,
   customer,
+  order,
   total,
   ref,
   otp,
@@ -29,6 +32,21 @@ export const buildOrderMessage = ({
   lines.push(`📞 Phone: ${customer.phone}`);
   lines.push(`📍 Address: ${customer.address}`);
   lines.push("");
+
+  if (order.orderType === "pickup" && order.pickup) {
+    lines.push("🏬 *Pickup Order*");
+    lines.push(`📅 Date: ${formatDateLong(order.pickup.date)}`);
+    lines.push(`⏰ Slot: ${order.pickup.slotLabel}`);
+  } else if (order.orderType === "delivery" && order.delivery) {
+    lines.push("🚚 *Delivery Order* (within 6 km zone)");
+    lines.push(`📅 Date: ${formatDateLong(order.delivery.date)}`);
+    lines.push(`📌 Landmark: ${order.delivery.landmark}`);
+    if (order.delivery.notes) {
+      lines.push(`📝 Notes: ${order.delivery.notes}`);
+    }
+  }
+  lines.push("");
+
   lines.push("📦 *Order Items:*");
   for (const i of items) {
     const sub = i.qty * i.product.promoPrice;

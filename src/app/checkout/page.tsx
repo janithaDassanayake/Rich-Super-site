@@ -9,7 +9,7 @@ import { generateOtp, generateOrderRef } from "@/lib/otp";
 import { buildOrderMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import OrderForm from "@/components/checkout/OrderForm";
 import OTPModal from "@/components/checkout/OTPModal";
-import type { CustomerDetails, PlacedOrder } from "@/types";
+import type { CustomerDetails, OrderDetails, PlacedOrder } from "@/types";
 
 export default function CheckoutPage() {
   const items = useCart((s) => s.items);
@@ -17,10 +17,23 @@ export default function CheckoutPage() {
   const clear = useCart((s) => s.clear);
   const [order, setOrder] = useState<PlacedOrder | null>(null);
 
-  const handlePlace = (customer: CustomerDetails) => {
+  const handlePlace = ({
+    customer,
+    order: orderDetails,
+  }: {
+    customer: CustomerDetails;
+    order: OrderDetails;
+  }) => {
     const otp = generateOtp();
     const ref = generateOrderRef();
-    const message = buildOrderMessage({ items, customer, total, ref, otp });
+    const message = buildOrderMessage({
+      items,
+      customer,
+      order: orderDetails,
+      total,
+      ref,
+      otp,
+    });
     const whatsappUrl = buildWhatsAppUrl(message);
     const placed: PlacedOrder = {
       ref,
@@ -28,12 +41,18 @@ export default function CheckoutPage() {
       total,
       items: [...items],
       customer,
+      order: orderDetails,
       whatsappUrl,
     };
     setOrder(placed);
-    // Open WhatsApp in a new tab so the customer can send the message.
+    // WhatsApp is NOT opened here — the user must first confirm the QR
+    // screenshot via the modal's OK button.
+  };
+
+  const handleConfirm = () => {
+    if (!order) return;
     if (typeof window !== "undefined") {
-      window.open(whatsappUrl, "_blank", "noopener");
+      window.open(order.whatsappUrl, "_blank", "noopener");
     }
     clear();
   };
@@ -50,7 +69,8 @@ export default function CheckoutPage() {
 
       <h1 className="text-3xl font-extrabold text-slate-900">Checkout</h1>
       <p className="text-slate-500 text-sm mt-1">
-        Review your cart, fill in your details, and confirm via WhatsApp.
+        Fill in your details, pick pickup or delivery, then confirm via
+        WhatsApp.
       </p>
 
       {items.length === 0 && !order ? (
@@ -62,8 +82,8 @@ export default function CheckoutPage() {
           .
         </div>
       ) : (
-        <div className="mt-6 grid md:grid-cols-[1fr_360px] gap-8">
-          <section className="bg-white border border-slate-200 rounded-2xl p-5">
+        <div className="mt-6 grid md:grid-cols-[1fr_340px] gap-8">
+          <section className="bg-white border border-slate-200 rounded-2xl p-5 md:order-2 h-fit md:sticky md:top-24">
             <h2 className="font-semibold text-slate-800 mb-3">Order summary</h2>
             <ul className="divide-y divide-slate-100">
               {(order ? order.items : items).map((i) => (
@@ -99,14 +119,19 @@ export default function CheckoutPage() {
             </div>
           </section>
 
-          <section className="bg-white border border-slate-200 rounded-2xl p-5">
-            <h2 className="font-semibold text-slate-800 mb-3">Your details</h2>
+          <section className="bg-white border border-slate-200 rounded-2xl p-5 md:order-1">
             <OrderForm disabled={items.length === 0} onSubmit={handlePlace} />
           </section>
         </div>
       )}
 
-      {order && <OTPModal order={order} onClose={() => setOrder(null)} />}
+      {order && (
+        <OTPModal
+          order={order}
+          onConfirm={handleConfirm}
+          onClose={() => setOrder(null)}
+        />
+      )}
     </div>
   );
 }

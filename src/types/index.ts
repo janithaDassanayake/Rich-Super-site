@@ -39,11 +39,31 @@ export interface CustomerDetails {
   address: string;
 }
 
+export type OrderType = "pickup" | "delivery";
+
+export interface PickupSchedule {
+  date: string; // YYYY-MM-DD
+  slotLabel: string; // e.g. "12:30 PM – 2:30 PM"
+}
+
+export interface DeliveryDetails {
+  landmark: string;
+  notes: string;
+  date: string; // YYYY-MM-DD
+}
+
+export interface OrderDetails {
+  orderType: OrderType;
+  pickup?: PickupSchedule;
+  delivery?: DeliveryDetails;
+}
+
 export interface PlacedOrder {
   ref: string;
   otp: string;
   total: number;
   items: CartItem[];
   customer: CustomerDetails;
+  order: OrderDetails;
   whatsappUrl: string;
 }
